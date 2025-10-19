@@ -7,9 +7,9 @@
 
 [![Docker Pulls](https://img.shields.io/docker/pulls/mekayelanik/knowledge-graph-mcp.svg?style=flat-square)](https://hub.docker.com/r/mekayelanik/knowledge-graph-mcp)
 [![Docker Stars](https://img.shields.io/docker/stars/mekayelanik/knowledge-graph-mcp.svg?style=flat-square)](https://hub.docker.com/r/mekayelanik/knowledge-graph-mcp)
-[![License](https://img.shields.io/badge/license-GPL-blue.svg?style=flat-square)](https://raw.githubusercontent.com/MekayelAnik/knowledge-graph-mcp-docker/refs/heads/main/LICENSE)
+[![License](https://img.shields.io/badge/license-GPL-blue.svg?style=flat-square)](LICENSE)
 
-**[NPM Package](https://www.npmjs.com/package/mcp-knowledge-graph)** • **[GitHub Repository](https://github.com/mekayelanik/knowledge-graph-mcp-docker)** • **[Docker Hub](https://hub.docker.com/r/mekayelanik/knowledge-graph-mcp)**
+**[NPM Package](https://www.npmjs.com/package/mcp-knowledge-graph)** • **[GitHub Repository](https://github.com/mekayelanik/knowledge-graph-mcp)** • **[Docker Hub](https://hub.docker.com/r/mekayelanik/knowledge-graph-mcp)**
 
 </div>
 
@@ -279,6 +279,7 @@ volumes:
 | Client | HTTP | SSE | WebSocket | Recommended |
 |:-------|:----:|:---:|:---------:|:------------|
 | **VS Code (Cline/Roo-Cline)** | ✅ | ✅ | ❌ | HTTP |
+| **JetBrains IDEs** | ✅ | ✅ | ❌ | HTTP |
 | **Claude Desktop** | ✅ | ✅ | ⚠️* | HTTP |
 | **Cursor** | ✅ | ✅ | ⚠️* | HTTP |
 | **Windsurf** | ✅ | ✅ | ⚠️* | HTTP |
@@ -296,6 +297,49 @@ Add to `.vscode/settings.json`:
       "url": "http://host-ip:8025/mcp",
       "transport": "http",
       "autoApprove": [
+           "aim_create_entities",
+           "aim_create_relations",
+           "aim_add_observations",
+           "aim_delete_entities",
+           "aim_delete_observations",
+           "aim_delete_relations",
+           "aim_search_nodes",
+           "aim_read_graph",
+           "aim_open_nodes",
+           "aim_list_databases"
+      ]
+    }
+  }
+}
+```
+
+### JetBrains IDEs (PyCharm, IntelliJ IDEA, WebStorm, etc.)
+
+JetBrains IDEs support MCP through the AI Assistant plugin. Configuration varies by IDE version:
+
+#### Method 1: Settings UI (Recommended)
+
+1. Open **Settings/Preferences** → **Tools** → **AI Assistant** → **MCP Servers**
+2. Click **Add Server**
+3. Configure the server:
+   - **Name:** `memory`
+   - **Transport:** `HTTP`
+   - **URL:** `http://host-ip:8025/mcp`
+4. Enable auto-approve for memory tools (optional)
+5. Click **Apply** and restart IDE
+
+#### Method 2: Configuration File
+
+Create or edit `~/.config/JetBrains/<IDE>/mcp_settings.json`:
+
+**PyCharm:**
+```json
+{
+  "mcpServers": {
+    "memory": {
+      "transport": "http",
+      "url": "http://localhost:8025/mcp",
+      "autoApprove": [
         "aim_create_entities",
         "aim_create_relations",
         "aim_add_observations",
@@ -308,6 +352,37 @@ Add to `.vscode/settings.json`:
   }
 }
 ```
+
+**IntelliJ IDEA:**
+Location: `~/.config/JetBrains/IntelliJIdea<VERSION>/mcp_settings.json`
+
+**WebStorm:**
+Location: `~/.config/JetBrains/WebStorm<VERSION>/mcp_settings.json`
+
+**Common locations:**
+- **Linux:** `~/.config/JetBrains/<IDE><VERSION>/mcp_settings.json`
+- **macOS:** `~/Library/Application Support/JetBrains/<IDE><VERSION>/mcp_settings.json`
+- **Windows:** `%APPDATA%\JetBrains\<IDE><VERSION>\mcp_settings.json`
+
+#### Method 3: Project-Level Configuration
+
+Create `.idea/mcp_settings.json` in your project root:
+
+```json
+{
+  "mcpServers": {
+    "memory": {
+      "transport": "http",
+      "url": "http://localhost:8025/mcp"
+    }
+  }
+}
+```
+
+**Verification:**
+1. Open AI Assistant in your IDE
+2. Check if "memory" server appears in available tools
+3. Test with: "List all my databases"
 
 ### Claude Desktop
 
@@ -739,9 +814,6 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        
-        # Optional: Add API key header
-        # proxy_set_header X-API-Key "your-api-key";
     }
 }
 ```
@@ -758,33 +830,6 @@ services:
       - "traefik.http.routers.memory.entrypoints=websecure"
       - "traefik.http.routers.memory.tls.certresolver=myresolver"
       - "traefik.http.services.memory.loadbalancer.server.port=8025"
-```
-
-### Docker Network Setup
-
-```yaml
-services:
-  knowledge-graph-mcp:
-    image: mekayelanik/knowledge-graph-mcp:stable
-    container_name: knowledge-graph-mcp
-    networks:
-      - ai-network
-    volumes:
-      - ./aim-memory:/data/.aim
-    environment:
-      - PORT=8025
-      - PROTOCOL=SHTTP
-    
-  ai-assistant:
-    image: ai-assistant:latest
-    networks:
-      - ai-network
-    environment:
-      - MEMORY_URL=http://knowledge-graph-mcp:8025/mcp
-
-networks:
-  ai-network:
-    driver: bridge
 ```
 
 ### Multiple Instances for Different Projects
@@ -812,30 +857,11 @@ services:
       - ./project-a-memory:/data/.aim
     environment:
       - PORT=8025
-  
-  # Project B memory
-  memory-project-b:
-    image: mekayelanik/knowledge-graph-mcp:stable
-    container_name: memory-project-b
-    ports:
-      - "8027:8025"
-    volumes:
-      - ./project-b-memory:/data/.aim
-    environment:
-      - PORT=8025
 ```
 
 ---
 
 ## Troubleshooting
-
-### Pre-Flight Checklist
-
-- ✅ Docker 23.0+
-- ✅ Port 8025 available
-- ✅ Persistent volume mounted
-- ✅ Correct file permissions (PUID/PGID)
-- ✅ Latest stable image
 
 ### Common Issues
 
@@ -865,24 +891,11 @@ sudo chown -R 1000:1000 ./aim-memory/
 
 **"File does not contain required _aim safety marker" Error**
 ```bash
-# The file may not belong to this system
-# Option 1: Delete and let system recreate
+# Delete and let system recreate
 rm ./aim-memory/memory.jsonl
 
-# Option 2: Add safety marker manually
+# Or add safety marker manually
 echo '{"type":"_aim","source":"mcp-knowledge-graph"}' | cat - ./aim-memory/memory.jsonl > temp && mv temp ./aim-memory/memory.jsonl
-```
-
-**Memories Going to Unexpected Locations**
-```bash
-# List all databases
-# Use aim_list_databases tool in your MCP client
-
-# Check memory directory contents
-docker exec knowledge-graph-mcp ls -la /data/.aim/
-
-# Verify MEMORY_PATH setting
-docker exec knowledge-graph-mcp env | grep MEMORY_PATH
 ```
 
 **Permission Denied Errors**
@@ -894,10 +907,6 @@ id $USER
 environment:
   - PUID=1001  # Your actual UID
   - PGID=1001  # Your actual GID
-
-# Recreate container
-docker compose down
-docker compose up -d
 ```
 
 **Connection Refused**
@@ -905,251 +914,8 @@ docker compose up -d
 # Verify container is running
 docker ps | grep knowledge-graph-mcp
 
-# Check port binding
-docker port knowledge-graph-mcp
-
 # Test health endpoint
 curl http://localhost:8025/healthz
-```
-
-**CORS Errors**
-```yaml
-# Development - allow all
-environment:
-  - CORS=*
-
-# Production - specific origins
-environment:
-  - CORS=https://yourdomain.com,https://app.yourdomain.com
-```
-
-**API Key Authentication Issues**
-```bash
-# Verify API key is set
-docker exec knowledge-graph-mcp env | grep API_KEY
-
-# Check if MCP client is sending key
-# Most clients don't support API key headers yet
-# Consider using CORS restrictions instead
-```
-
-**Too Many Similar Databases**
-```bash
-# List all database files
-docker exec knowledge-graph-mcp ls -la /data/.aim/
-
-# Delete unwanted databases
-docker exec knowledge-graph-mcp rm /data/.aim/memory-unwanted.jsonl
-
-# Or delete from host
-rm ./aim-memory/memory-unwanted.jsonl
-```
-
-### Debug Mode
-
-```yaml
-# Enable verbose debugging
-environment:
-  - DEBUG_MODE=verbose
-
-# Container will pause for inspection
-docker exec -it knowledge-graph-mcp /bin/bash
-```
-
-### Health Check Testing
-
-```bash
-# Basic health check
-curl http://localhost:8025/healthz
-
-# Test MCP endpoint
-curl http://localhost:8025/mcp
-
-# Test with tool invocation
-curl -X POST http://localhost:8025/mcp \
-  -H "Content-Type: application/json" \
-  -d '{"method":"tools/list"}'
-```
-
----
-
-## Resources & Support
-
-### Documentation
-- 📦 [NPM Package](https://www.npmjs.com/package/mcp-knowledge-graph)
-- 🔧 [GitHub Repository](https://github.com/mekayelanik/knowledge-graph-mcp-docker)
-- 🐳 [Docker Hub](https://hub.docker.com/r/mekayelanik/knowledge-graph-mcp)
-
-### MCP Resources
-- 📘 [MCP Protocol Specification](https://modelcontextprotocol.io)
-- 🎓 [MCP Documentation](https://modelcontextprotocol.io/docs)
-- 💬 [MCP Community](https://discord.gg/mcp)
-
-### Getting Help
-
-**Docker Image Issues:**
-- [GitHub Issues](https://github.com/mekayelanik/knowledge-graph-mcp-docker/issues)
-- [Discussions](https://github.com/mekayelanik/knowledge-graph-mcp-docker/discussions)
-
-**General Questions:**
-- Check logs: `docker logs knowledge-graph-mcp`
-- Test health: `curl http://localhost:8025/healthz`
-- Verify memory files: `ls -la ./aim-memory/`
-
-### Updating
-
-```bash
-# Docker Compose
-docker compose pull
-docker compose up -d
-
-# Docker CLI
-docker pull mekayelanik/knowledge-graph-mcp:stable
-docker stop knowledge-graph-mcp
-docker rm knowledge-graph-mcp
-# Re-run your docker run command
-```
-
-### Version Pinning
-
-```yaml
-# Use specific version
-services:
-  knowledge-graph-mcp:
-    image: mekayelanik/knowledge-graph-mcp:1.0.0
-
-# Or use stable tag (recommended)
-services:
-  knowledge-graph-mcp:
-    image: mekayelanik/knowledge-graph-mcp:stable
-```
-
----
-
-## Best Practices
-
-### Naming Conventions
-
-```json
-// Use underscores for entity names
-"John_Doe"           // ✅ Good
-"John Doe"           // ❌ Avoid spaces
-
-// Use descriptive entity types
-"person"             // ✅ Good
-"project"            // ✅ Good
-"thing"              // ❌ Too vague
-
-// Use consistent relation types
-"works_on"           // ✅ Good
-"attended"           // ✅ Good
-"related_to"         // ❌ Too generic
-```
-
-### Database Organization
-
-```yaml
-# Work-related memories
-context: "work"
-- Projects, meetings, colleagues, tasks
-
-# Personal memories
-context: "personal"
-- Family, friends, personal events, hobbies
-
-# Health information
-context: "health"
-- Medical history, appointments, medications
-
-# Research and learning
-context: "research"
-- Papers, concepts, experiments, findings
-```
-
-### Backup Schedule
-
-```bash
-# Daily backups (keep 7 days)
-0 2 * * * /path/to/backup-script.sh daily 7
-
-# Weekly backups (keep 4 weeks)
-0 3 * * 0 /path/to/backup-script.sh weekly 4
-
-# Monthly backups (keep 12 months)
-0 4 1 * * /path/to/backup-script.sh monthly 12
-```
-
-### Security Recommendations
-
-1. **Use persistent volumes** for production
-2. **Enable API key authentication** when exposing publicly
-3. **Never use `CORS=*`** in production
-4. **Regular backups** of memory files
-5. **Run as non-root** (default PUID/PGID)
-6. **Use reverse proxy** with rate limiting for public access
-7. **Monitor logs** for suspicious activity
-8. **Keep Docker image updated**
-9. **Restrict network access** to trusted clients only
-10. **Use specific version tags** for production stability
-
----
-
-## Performance Tips
-
-### Optimize Storage
-
-```yaml
-# Use SSD for better I/O performance
-volumes:
-  - /mnt/ssd/aim-memory:/data/.aim
-
-# Regular maintenance
-# Compact large memory files periodically
-# Remove unused databases
-```
-
-### Resource Allocation
-
-```yaml
-# Light usage (personal projects)
-deploy:
-  resources:
-    limits:
-      cpus: '0.5'
-      memory: 256M
-
-# Medium usage (small teams)
-deploy:
-  resources:
-    limits:
-      cpus: '1.0'
-      memory: 512M
-
-# Heavy usage (large knowledge graphs)
-deploy:
-  resources:
-    limits:
-      cpus: '2.0'
-      memory: 1G
-```
-
-### Monitoring
-
-```yaml
-# Add logging driver
-services:
-  knowledge-graph-mcp:
-    image: mekayelanik/knowledge-graph-mcp:stable
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    
-    # Prometheus metrics (if available)
-    labels:
-      - "prometheus.scrape=true"
-      - "prometheus.port=8025"
 ```
 
 ---
@@ -1167,21 +933,7 @@ services:
     "observations": [
       "Best friend from college",
       "Birthday: March 15",
-      "Lives in Seattle",
-      "Works at Tech Corp"
-    ]
-  }]
-}
-
-// Track important dates
-{
-  "entities": [{
-    "name": "Anniversary_2024",
-    "entityType": "event",
-    "observations": [
-      "Date: June 20, 2024",
-      "10th wedding anniversary",
-      "Reservation at Italian restaurant"
+      "Lives in Seattle"
     ]
   }]
 }
@@ -1199,278 +951,66 @@ services:
     "observations": [
       "Started: October 1, 2024",
       "Deadline: December 31, 2024",
-      "Budget: $50,000",
       "Status: In Progress"
     ]
-  }],
-  "relations": [{
-    "from": "Website_Redesign_Q4",
-    "to": "Alice_Smith",
-    "relationType": "project_manager"
-  }]
-}
-```
-
-### Research & Learning
-
-```json
-// Store research findings
-{
-  "context": "research",
-  "entities": [{
-    "name": "Neural_Networks_Paper_2024",
-    "entityType": "research",
-    "observations": [
-      "Authors: Smith et al.",
-      "Published: Nature, 2024",
-      "Key finding: New activation function improves accuracy by 15%",
-      "Relevant for my thesis work"
-    ]
-  }]
-}
-```
-
-### Health Tracking
-
-```json
-// Medical information
-{
-  "context": "health",
-  "entities": [{
-    "name": "Dr_Johnson",
-    "entityType": "doctor",
-    "observations": [
-      "Specialty: Cardiology",
-      "Clinic: Heart Health Center",
-      "Phone: (555) 123-4567",
-      "Last visit: September 15, 2024"
-    ]
   }]
 }
 ```
 
 ---
 
-## Migration & Integration
+## Best Practices
 
-### Migrating from Local NPM Installation
+### Naming Conventions
 
-If you're currently using the NPM package locally:
-
-```bash
-# Export your existing memory
-# Assuming you have memory files in ~/.aim/
-cp -r ~/.aim/ ./aim-memory/
-
-# Update your docker-compose.yml to use this directory
-volumes:
-  - ./aim-memory:/data/.aim
-
-# Start the container
-docker compose up -d
-
-# Your AI assistant will now access the same memory files
-```
-
-### Integrating with CI/CD
-
-```yaml
-# GitHub Actions example
-name: Backup AI Memory
-
-on:
-  schedule:
-    - cron: '0 0 * * *'  # Daily at midnight
-
-jobs:
-  backup:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Backup memory files
-        run: |
-          docker exec knowledge-graph-mcp tar -czf /tmp/backup.tar.gz /data/.aim
-          docker cp knowledge-graph-mcp:/tmp/backup.tar.gz ./backup.tar.gz
-      
-      - name: Upload to storage
-        uses: actions/upload-artifact@v3
-        with:
-          name: memory-backup-${{ github.run_number }}
-          path: backup.tar.gz
-```
-
-### Using with Multiple AI Assistants
-
-```yaml
-# Share memory across different AI tools
-services:
-  knowledge-graph-mcp:
-    image: mekayelanik/knowledge-graph-mcp:stable
-    ports:
-      - "8025:8025"
-    volumes:
-      - shared-memory:/data/.aim
-    networks:
-      - ai-network
-
-  # All your AI assistants connect to the same memory server
-  # via http://knowledge-graph-mcp:8025/mcp
-
-volumes:
-  shared-memory:
-    driver: local
-
-networks:
-  ai-network:
-    driver: bridge
-```
-
----
-
-## Frequently Asked Questions
-
-### What is the difference between master database and named databases?
-
-The **master database** (always named "default") is your primary memory store used by default. **Named databases** are optional additions for organizing specific topics like work, personal, or health. Think of the master as your main notebook and named databases as specialized notebooks for different subjects.
-
-### How do I choose between project-local and global storage?
-
-Use **project-local** (`.aim` directory) when:
-- Working on specific projects with isolated memory
-- Need project-specific context that shouldn't mix with other projects
-- Want memory to stay with the project files
-
-Use **global** storage when:
-- Need access to the same memory from multiple projects
-- Working on general tasks not tied to a specific project
-- Want centralized memory management
-
-### Can I use both project-local and global storage simultaneously?
-
-Yes! The system automatically detects `.aim` directories and uses project-local storage when present. You can force global storage by using the `location: "global"` parameter in tool calls.
-
-### How do I migrate memory between locations?
-
-```bash
-# Copy from global to project
-cp ~/.aim/memory.jsonl ./my-project/.aim/memory.jsonl
-
-# Copy from project to global
-cp ./my-project/.aim/memory.jsonl ~/.aim/memory-project-backup.jsonl
-```
-
-### What happens if I lose the memory files?
-
-Memory files contain all your stored knowledge. **Always maintain backups!** If lost:
-- Container will create new empty memory files
-- All previous entities, relations, and observations are lost
-- No automatic recovery without backups
-
-### Can multiple containers share the same memory files?
-
-**Not recommended!** Multiple containers writing to the same files can cause:
-- Data corruption
-- Race conditions
-- Inconsistent state
-
-Instead, run one container and have all clients connect to it.
-
-### How much storage do memory files use?
-
-Memory files are text-based JSONL format:
-- Empty database: ~100 bytes (safety marker)
-- Small personal memory (100 entities): ~50-100 KB
-- Medium knowledge base (1000 entities): ~500 KB - 1 MB
-- Large enterprise knowledge (10000+ entities): ~5-10 MB+
-
-Very efficient storage for long-term knowledge retention.
-
-### Can I edit memory files manually?
-
-Yes, but carefully:
-1. Stop the container first: `docker stop knowledge-graph-mcp`
-2. Edit the JSONL file (each line is valid JSON)
-3. Ensure the first line is the safety marker
-4. Restart the container
-
-Better approach: Use the provided tools through your AI assistant.
-
-### How do I search for specific information?
-
-Use the `aim_search_nodes` tool with keywords:
 ```json
-{
-  "query": "conference"
-}
+// Use underscores for entity names
+"John_Doe"           // ✅ Good
+"John Doe"           // ❌ Avoid spaces
+
+// Use descriptive entity types
+"person"             // ✅ Good
+"project"            // ✅ Good
+"thing"              // ❌ Too vague
 ```
 
-This searches all entity names and observations, returning matches across your entire knowledge graph.
+### Security Recommendations
 
-### What's the best way to organize large amounts of knowledge?
-
-1. **Use multiple databases** for different topics (work, personal, research)
-2. **Create clear entity types** (person, project, event, concept, location)
-3. **Use descriptive names** with underscores (Conference_2024, not just Event)
-4. **Add detailed observations** with dates and context
-5. **Build relationships** to connect related entities
-6. **Regular cleanup** of outdated or duplicate information
-
----
-
-## Changelog
-
-### Version 1.0.0
-- Initial release with full MCP support
-- Master database implementation
-- Multiple database support
-- Project-local and global storage
-- Safety marker system
-- HTTP, SSE, and WebSocket protocols
-- CORS configuration
-- API key authentication
-- Health check endpoint
-- Auto-approve compatible with all major MCP clients
+1. **Use persistent volumes** for production
+2. **Enable API key authentication** when exposing publicly
+3. **Never use `CORS=*`** in production
+4. **Regular backups** of memory files
+5. **Run as non-root** (default PUID/PGID)
+6. **Use reverse proxy** with rate limiting
+7. **Monitor logs** for suspicious activity
+8. **Keep Docker image updated**
 
 ---
 
-## Contributing
+## Resources & Support
 
-We welcome contributions! Here's how you can help:
+### Documentation
+- 📦 [NPM Package](https://www.npmjs.com/package/mcp-knowledge-graph)
+- 🔧 [GitHub Repository](https://github.com/mekayelanik/knowledge-graph-mcp)
+- 🐳 [Docker Hub](https://hub.docker.com/r/mekayelanik/knowledge-graph-mcp)
 
-### Reporting Issues
-- Check existing issues first
-- Provide Docker version and environment details
-- Include relevant logs (`docker logs knowledge-graph-mcp`)
-- Describe expected vs actual behavior
+### MCP Resources
+- 📘 [MCP Protocol Specification](https://modelcontextprotocol.io)
+- 🎓 [MCP Documentation](https://modelcontextprotocol.io/docs)
+- 💬 [MCP Community](https://discord.gg/mcp)
 
-### Feature Requests
-- Describe the use case
-- Explain why it would be useful
-- Suggest implementation approach if possible
-
-### Pull Requests
-- Fork the repository
-- Create a feature branch
-- Follow existing code style
-- Test thoroughly
-- Update documentation
-- Submit PR with clear description
+### Getting Help
+- Check logs: `docker logs knowledge-graph-mcp`
+- Test health: `curl http://localhost:8025/healthz`
+- [GitHub Issues](https://github.com/mekayelanik/knowledge-graph-mcp-docker/issues)
 
 ---
 
 ## License
 
-GPL License - See [LICENSE](https://raw.githubusercontent.com/MekayelAnik/knowledge-graph-mcp-docker/refs/heads/main/LICENSE) for details.
+GPL License - See [LICENSE](LICENSE) for details.
 
-**Disclaimer:** Unofficial Docker image for [mcp-knowledge-graph](https://www.npmjs.com/package/mcp-knowledge-graph). This containerized version is maintained independently. Please report Docker-specific issues to this repository and NPM package issues to the original package maintainers.
-
----
-
-## Acknowledgments
-
-- Built on top of the excellent [mcp-knowledge-graph](https://www.npmjs.com/package/mcp-knowledge-graph) NPM package
-- Uses [Supergateway](https://www.npmjs.com/package/supergateway) for MCP protocol transport
-- Inspired by the [Model Context Protocol](https://modelcontextprotocol.io) specification
-- Thanks to the MCP community for feedback and testing
+**Disclaimer:** Unofficial Docker image for [mcp-knowledge-graph](https://www.npmjs.com/package/mcp-knowledge-graph). This containerized version is maintained independently.
 
 ---
 
@@ -1478,6 +1018,6 @@ GPL License - See [LICENSE](https://raw.githubusercontent.com/MekayelAnik/knowle
 
 **🧠 Build Persistent AI Memory • 🔗 Connect Knowledge • 📊 Organize Information**
 
-[Report Docker Issue](https://github.com/mekayelanik/knowledge-graph-mcp-docker/issues) • [Request Feature](https://github.com/mekayelanik/knowledge-graph-mcp-docker/issues) • [Contribute](https://github.com/mekayelanik/knowledge-graph-mcp-docker/pulls)
+[Report Image Related Issue](https://github.com/mekayelanik/knowledge-graph-mcp-docker/issues) • [Request Image Related Feature](https://github.com/mekayelanik/knowledge-graph-mcp-docker/issues) • [Contribute](https://github.com/mekayelanik/knowledge-graph-mcp/pulls)
 
 </div>
