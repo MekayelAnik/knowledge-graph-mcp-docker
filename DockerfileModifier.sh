@@ -2,7 +2,7 @@
 set -ex
 # Set variables first
 REPO_NAME='knowledge-graph-mcp'
-BASE_IMAGE=$(cat ./build_data/base-image 2>/dev/null || echo "node:alpine")
+BASE_IMAGE=$(cat ./build_data/base-image 2>/dev/null || echo "node:current-alpine")
 KNOWLEDGE_GRAPH_VERSION=$(cat ./build_data/version 2>/dev/null || exit 1)
 KNOWLEDGE_GRAPH_MCP_REPO="mcp-knowledge-graph"
 KNOWLEDGE_GRAPH_MCP_PKG="${KNOWLEDGE_GRAPH_MCP_REPO}@${KNOWLEDGE_GRAPH_VERSION}"
