@@ -1,11 +1,11 @@
 #!/bin/bash
-set -ex
+set -euxo pipefail
 # Set variables first
 REPO_NAME='knowledge-graph-mcp'
 BASE_IMAGE=$(cat ./build_data/base-image 2>/dev/null || echo "node:current-alpine")
+HAPROXY_IMAGE=$(cat ./build_data/haproxy-image 2>/dev/null || echo "haproxy:lts-alpine")
 KNOWLEDGE_GRAPH_VERSION=$(cat ./build_data/version 2>/dev/null || exit 1)
-KNOWLEDGE_GRAPH_MCP_REPO="mcp-knowledge-graph"
-KNOWLEDGE_GRAPH_MCP_PKG="${KNOWLEDGE_GRAPH_MCP_REPO}@${KNOWLEDGE_GRAPH_VERSION}"
+KNOWLEDGE_GRAPH_MCP_PKG="mcp-knowledge-graph@${KNOWLEDGE_GRAPH_VERSION}"
 SUPERGATEWAY_PKG='supergateway@latest'
 DOCKERFILE_NAME="Dockerfile.$REPO_NAME"
 
@@ -29,6 +29,7 @@ else
         echo "ARG BASE_IMAGE=$BASE_IMAGE"
         echo "ARG KNOWLEDGE_GRAPH_VERSION=$KNOWLEDGE_GRAPH_VERSION"
         cat << EOF
+FROM $HAPROXY_IMAGE AS haproxy-src
 FROM $BASE_IMAGE AS build
 
 # Author info:
@@ -38,35 +39,43 @@ LABEL org.opencontainers.image.source="https://github.com/mekayelanik/knowledge-
 # Copy the entrypoint script into the container and make it executable
 COPY ./resources/ /usr/local/bin/
 RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/banner.sh \
-    && chmod +r /usr/local/bin/build-timestamp.txt
+    && if [ -f /usr/local/bin/build-timestamp.txt ]; then chmod +r /usr/local/bin/build-timestamp.txt; fi \
+    && mkdir -p /etc/haproxy \
+    && mv -vf /usr/local/bin/haproxy.cfg.template /etc/haproxy/haproxy.cfg.template \
+    && ls -la /etc/haproxy/haproxy.cfg.template
 
-# Install required APK packages (curl not needed anymore)
+# Install required APK packages
 RUN echo "https://dl-cdn.alpinelinux.org/alpine/edge/main" > /etc/apk/repositories && \
     echo "https://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories && \
-    apk --update-cache --no-cache add bash shadow su-exec tzdata && \
+    apk --update-cache --no-cache add bash shadow su-exec tzdata haproxy netcat-openbsd openssl && \
     rm -rf /var/cache/apk/*
 
-# Check if package exists before installing with better error handling
+# HAProxy with native QUIC/H3 support from official image
+COPY --from=haproxy-src /usr/local/sbin/haproxy /usr/sbin/haproxy
+RUN mkdir -p /usr/local/sbin && ln -sf /usr/sbin/haproxy /usr/local/sbin/haproxy
+
+# Check if package exists before installing
 RUN echo "Checking if package exists: ${KNOWLEDGE_GRAPH_MCP_PKG}" && \
-    if npm view ${KNOWLEDGE_GRAPH_MCP_PKG} --json >/dev/null 2>&1; then \
+    if npm view ${KNOWLEDGE_GRAPH_MCP_PKG} >/dev/null 2>&1; then \
         echo "Package found, installing..." && \
-        npm install -g ${KNOWLEDGE_GRAPH_MCP_PKG} --loglevel verbose && \
+        npm install -g ${KNOWLEDGE_GRAPH_MCP_PKG} --omit=dev --no-audit --no-fund --loglevel error && \
         echo "Package installed successfully"; \
     else \
         echo "ERROR: Package ${KNOWLEDGE_GRAPH_MCP_PKG} not found in registry!" >&2; \
         echo "Available versions:" && \
-        npm view ${KNOWLEDGE_GRAPH_MCP_REPO} versions --json | tr -d '\[\],' | tr '"' '\n' | grep -v '^$' | head -10; \
+        npm view mcp-knowledge-graph versions --json | tr -d '\[\],' | tr '"' '\n' | grep -v '^$' | head -10; \
         exit 1; \
     fi
 
 # Install Supergateway
 RUN echo "Installing Supergateway..." && \
-    npm install -g ${SUPERGATEWAY_PKG} --loglevel verbose && \
-    npm cache clean --force
+    npm install -g ${SUPERGATEWAY_PKG} --omit=dev --no-audit --no-fund --loglevel error && \
+    npm cache clean --force && \
+    rm -rf /root/.npm /tmp/* /var/tmp/* && \
+    rm -rf /usr/local/lib/node_modules/npm/man /usr/local/lib/node_modules/npm/docs /usr/local/lib/node_modules/npm/html
 
 # Use an ARG for the default port
-ARG PORT=8025
-ARG MEMORY_PATH=/data/.aim
+ARG PORT=8010
 
 # Add ARG for API key
 ARG API_KEY=""
@@ -75,16 +84,9 @@ ARG API_KEY=""
 ENV PORT=\${PORT}
 ENV API_KEY=\${API_KEY}
 
-ENV MEMORY_PATH=\${MEMORY_PATH}
-
-# Expose the port
-EXPOSE \${PORT}
-
-VOLUME ["/data/.aim"]
-
-# Health check using nc (netcat) to check if the port is open
+# L7 health check: auto-detects HTTP/HTTPS via ENABLE_HTTPS env var
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \\
-    CMD nc -z localhost \${PORT:-8025} || exit 1
+    CMD sh -c 'wget -q --spider --no-check-certificate \$([ "\$ENABLE_HTTPS" = "true" ] && echo https || echo http)://127.0.0.1:\${PORT:-8025}/healthz'
 
 # Set the entrypoint
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
