@@ -14,18 +14,6 @@
 
 ### Multi-Architecture Docker Image for AI Memory & Persistent Knowledge
 
-<div align="left">
-
-<img alt="knowledge-graph-mcp" src="https://img.shields.io/badge/Knowledge Graph-MCP-00E9A3?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJMMiA3TDEyIDEyTDIyIDdMMTIgMloiIGZpbGw9IndoaXRlIi8+CjxwYXRoIGQ9Ik0yIDEyTDEyIDE3TDIyIDEyIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgo8cGF0aCBkPSJNMiAxN0wxMiAyMkwyMiAxNyIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPC9zdmc+&logoColor=white" width="400">
-
-[![Docker Pulls](https://img.shields.io/docker/pulls/mekayelanik/knowledge-graph-mcp.svg?style=flat-square)](https://hub.docker.com/r/mekayelanik/knowledge-graph-mcp)
-[![Docker Stars](https://img.shields.io/docker/stars/mekayelanik/knowledge-graph-mcp.svg?style=flat-square)](https://hub.docker.com/r/mekayelanik/knowledge-graph-mcp)
-[![License](https://img.shields.io/badge/license-GPL-blue.svg?style=flat-square)](https://raw.githubusercontent.com/MekayelAnik/knowledge-graph-mcp-docker/refs/heads/main/LICENSE)
-
-**[Official Website](https://npmjs.com/package/mcp-knowledge-graph/)** • **[Documentation](https://github.com/nicholasgriffintn/mcp-knowledge-graph)** • **[Docker Hub](https://hub.docker.com/r/mekayelanik/knowledge-graph-mcp)**
-
-</div>
-
 ---
 
 ## 📋 Table of Contents
