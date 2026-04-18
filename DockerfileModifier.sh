@@ -84,6 +84,13 @@ ARG API_KEY=""
 # Set an ENV variable from the ARG for runtime
 ENV PORT=\${PORT}
 ENV API_KEY=\${API_KEY}
+ENV MEMORY_PATH=/data/.aim
+
+# Set working directory so server's project auto-detection finds .aim deterministically
+WORKDIR /data
+
+# Persist knowledge graph memory across container restarts
+VOLUME ["/data"]
 
 # L7 health check: auto-detects HTTP/HTTPS via ENABLE_HTTPS env var
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \\

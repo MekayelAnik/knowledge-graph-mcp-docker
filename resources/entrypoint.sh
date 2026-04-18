@@ -10,6 +10,7 @@ readonly DEFAULT_TLS_DAYS=365
 readonly DEFAULT_TLS_CN="localhost"
 readonly DEFAULT_TLS_MIN_VERSION="TLSv1.3"
 readonly DEFAULT_HTTP_VERSION_MODE="auto"
+readonly DEFAULT_MEMORY_PATH="/data/.aim"
 readonly SAFE_API_KEY_REGEX='^[[:graph:]]+$'
 readonly MIN_API_KEY_LEN=5
 readonly MAX_API_KEY_LEN=256
@@ -586,7 +587,10 @@ start_haproxy() {
 }
 
 start_mcp_server() {
-    local mcp_server_cmd="npx -y mcp-knowledge-graph"
+    mkdir -p "$MEMORY_PATH"
+    chown -R "${PUID}:${PGID}" "$MEMORY_PATH" 2>/dev/null || true
+
+    local mcp_server_cmd="npx -y mcp-knowledge-graph --memory-path ${MEMORY_PATH}"
 
     case "${PROTOCOL^^}" in
         SHTTP|STREAMABLEHTTP)
@@ -685,8 +689,10 @@ main() {
         handle_first_run
     fi
 
+    MEMORY_PATH="${MEMORY_PATH:-$DEFAULT_MEMORY_PATH}"
+
     # Export variables for banner.sh (runs as child process)
-    export PORT PUID PGID PROTOCOL
+    export PORT PUID PGID PROTOCOL MEMORY_PATH
     /usr/local/bin/banner.sh
 
     if is_true "$ENABLE_HTTPS"; then
